@@ -1,20 +1,33 @@
 {
   "name": "testvercelfunctions",
   "version": "1.0.0",
-  "description": "测试vercel函数读取、存储数据",
+  "description": "测试 Vercel 函数读取、存储数据",
   "main": "index.js",
   "scripts": {
+    "dev": "vercel dev",
+    "build": "vercel build",
+    "start": "vercel start",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/luduanxu/testVercelFunctions.git"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "vercel",
+    "functions",
+    "nodejs"
+  ],
+  "author": "Your Name <your.email@example.com>",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/luduanxu/testVercelFunctions/issues"
   },
-  "homepage": "https://github.com/luduanxu/testVercelFunctions#readme"
+  "homepage": "https://github.com/luduanxu/testVercelFunctions#readme",
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "vercel": "^28.0.0"
+  }
 }
