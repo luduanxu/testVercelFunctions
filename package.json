@@ -1,0 +1,20 @@
+{
+  "name": "testvercelfunctions",
+  "version": "1.0.0",
+  "description": "测试vercel函数读取、存储数据",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/luduanxu/testVercelFunctions.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/luduanxu/testVercelFunctions/issues"
+  },
+  "homepage": "https://github.com/luduanxu/testVercelFunctions#readme"
+}
