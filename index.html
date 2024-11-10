@@ -196,11 +196,6 @@
     let currentYear = new Date().getFullYear();
     let selectedDate = new Date();
     let data = {}
-    const infoKey = 'descInfoKey'
-    const dataStr = localStorage.getItem(infoKey)
-    if (dataStr) {
-        data = JSON.parse(dataStr)
-    }
 
     function addOneInfo(cell, no, dayNo, descFlag) {
         // cell 元素， no 日期， dayNo第几天, descFlag是否有说明
@@ -347,22 +342,36 @@
         noteText.value = savedNote ? savedNote : "";
     }
 
-    function saveNote() {
+    async function saveNote() {
         const noteText = document.getElementById('note-text').value;
         const selectedDate = document.getElementById('select-date').innerText.split('：')[1];
-        if (noteText && noteText !== '') {
-            data[selectedDate] = noteText
-        } else {
-            delete data[selectedDate]
+
+        const newData = {
+            [selectedDate]: noteText
+        };
+
+        try {
+            const response = await fetch('/api/data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(newData)
+            });
+
+            if (response.ok) {
+                console.log('Data saved successfully');
+            } else {
+                console.error('Failed to save data to server');
+            }
+        } catch (error) {
+            console.error('Error saving data:', error);
         }
-        localStorage.setItem(infoKey, JSON.stringify(data));
     }
 
     function formatDate(date) {
         return date.toISOString().split('T')[0];
     }
-
-    displayCalendar();
 
     function copyText(strIn) {
         if (window.clipboardData) {
@@ -379,30 +388,83 @@
         }
     }
 
-    function copyData() {
-        copyText(JSON.stringify(data))
+    async function copyData() {
+        try {
+            const response = await fetch('/api/data', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                const dataGet = await response.json();
+                console.log('dataGet', dataGet);
+                copyText(JSON.stringify(dataGet));
+            } else {
+                console.error('Failed to load data from server');
+            }
+        } catch (error) {
+            console.error('Error loading data:', error);
+        }
     }
 
-    function importData() {
+    async function importData() {
         const noteText = document.getElementById('note-text').value;
         try {
-            let inputData = JSON.parse(noteText)
+            const inputData = JSON.parse(noteText);
             if (inputData) {
                 for (let key of Object.keys(inputData)) {
                     if (inputData[key] && inputData[key] !== '') {
-                        data[key] = inputData[key]
+                        data[key] = inputData[key];
                     } else {
-                        delete data[key]
+                        delete data[key];
                     }
                 }
+
+                const response = await fetch('/api/data', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    console.log('Data imported successfully');
+                    location.reload();
+                } else {
+                    console.error('Failed to import data to server');
+                }
             }
-
-            localStorage.setItem(infoKey, JSON.stringify(data));
-            location.reload()
-        } catch (e) {
-
+        } catch (error) {
+            console.error('Error importing data:', error);
         }
     }
+
+    async function getData() {
+        try {
+            const response = await fetch('/api/data', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                const dataGet = await response.json();
+                console.log('dataGet', dataGet)
+                data = dataGet;
+                displayCalendar();
+            } else {
+                console.error('Failed to load data from server');
+            }
+        } catch (error) {
+            console.error('Error loading data:', error);
+        }
+    }
+
+    getData()
 </script>
 </body>
 </html>
