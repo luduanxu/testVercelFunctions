@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日历便签</title>
+    <style>
+        /* 移动优先 */
+        body, .calendar-container, .calendar-header, .calendar-header-left, .calendar-header-right, table, th, td {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f5f5f5;
+            padding: 4px;
+        }
+
+        .calendar-container {
+            width: 100%;
+            max-width: 600px;
+            background: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+        }
+
+        .calendar-header span {
+            cursor: pointer;
+        }
+
+        .calendar-header span:hover,
+        .today-button:hover {
+            opacity: 0.8;
+        }
+
+        .today-button {
+            cursor: pointer;
+            padding: 2px 2px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.8em;
+            margin-left: 2px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #ddd;
+            font-size: 0.8em;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        td {
+            position: relative;
+            transition: background-color 0.3s;
+        }
+
+        td:hover {
+            background-color: #e0e0e0;
+        }
+
+        .lunar-date {
+            position: absolute;
+            bottom: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.7em;
+            color: #555;
+        }
+
+        .weekend {
+            color: red;
+        }
+
+        .today {
+            background-color: #ffeb3b;
+        }
+
+        .prev-month, .next-month {
+            color: #999;
+        }
+
+        .day-no {
+            font-size: 10px;
+            color: #555;
+        }
+
+        .notes-section {
+            padding: 10px;
+            background-color: #fff;
+            border-top: 1px solid #ddd;
+            font-size: 12px;
+        }
+
+        .notes-section label {
+        }
+
+        .notes-section input, .notes-section textarea {
+            width: calc(100% - 8px);
+            padding: 2px;
+            margin-top: 4px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .save-button {
+            cursor: pointer;
+            padding: 2px 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.8em;
+            margin-left: 2px;
+        }
+
+        .save-button:hover {
+            opacity: 0.8;
+        }
+
+        .desc-clz {
+            color: green;
+        }
+    </style>
+</head>
+<body>
+<div class="calendar-container">
+    <div class="calendar-header">
+        <div class="calendar-header-left">
+            <span id="month-year"></span>
+        </div>
+        <div class="calendar-header-right">
+            <span class="today-button" onclick="prevMonth()">上个月</span>
+            <span class="today-button" onclick="nextMonth()">下个月</span>
+            <button class="today-button" onclick="goToToday()">今天</button>
+        </div>
+    </div>
+    <table id="calendar">
+        <thead>
+        <tr>
+            <th>日</th>
+            <th>一</th>
+            <th>二</th>
+            <th>三</th>
+            <th>四</th>
+            <th>五</th>
+            <th>六</th>
+        </tr>
+        </thead>
+        <tbody id="calendar-body">
+        </tbody>
+    </table>
+    <div class="notes-section">
+        <span id="select-date">日期:</span>
+        <br>
+        <label for="note-text">事项:</label>
+        <button class="save-button" onclick="saveNote()">保存</button>
+        <button class="save-button" onclick="copyData()" style="margin-left: 20px; background-color: gray">复制数据
+        </button>
+        <button class="save-button" onclick="importData()" style="margin-left: 20px; background-color: gray">导入数据
+        </button>
+        <textarea id="note-text" rows="10"></textarea>
+    </div>
+</div>
+
+<script>
+    const birthday = new Date("2024-10-20 15:20:00");
+    let currentMonth = new Date().getMonth();
+    let currentYear = new Date().getFullYear();
+    let selectedDate = new Date();
+    let data = {}
+    const infoKey = 'descInfoKey'
+    const dataStr = localStorage.getItem(infoKey)
+    if (dataStr) {
+        data = JSON.parse(dataStr)
+    }
+
+    function addOneInfo(cell, no, dayNo, descFlag) {
+        // cell 元素， no 日期， dayNo第几天, descFlag是否有说明
+        const first = document.createElement('div');
+        first.classList.add('one-day');
+        first.innerText = no;
+        cell.appendChild(first);
+
+        const dayNoDiv = document.createElement('div');
+        cell.appendChild(dayNoDiv);
+        if (dayNo !== '') {
+            dayNoDiv.classList.add('day-no');
+            dayNoDiv.innerText = dayNo + '天';
+        }
+        if (descFlag) {
+            dayNoDiv.classList.add('desc-clz')
+        }
+    }
+
+    function calculateDaysFromBirthday(date) {
+        const currentDate = new Date(currentYear, currentMonth, date);
+        if (currentDate >= birthday) {
+            return Math.floor((currentDate - birthday) / (1000 * 60 * 60 * 24)) + 1;
+        } else {
+            return '';
+        }
+    }
+
+    function displayCalendar() {
+
+        const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
+        const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
+        const daysInMonth = lastDayOfMonth.getDate();
+        const startDay = firstDayOfMonth.getDay();
+        const today = new Date();
+        const isToday = (year, month, day) => year === today.getFullYear() && month === today.getMonth() && day === today.getDate();
+        const calendarBody = document.getElementById('calendar-body');
+
+        calendarBody.innerHTML = '';
+
+        let date = 1;
+        let rowCount = 0;
+        let nextDay = 1;
+
+        function setPreDate(j, row) {
+            const prevMonthDate = new Date(currentYear, currentMonth, 0);
+            const cell = document.createElement('td');
+
+            addOneInfo(cell, prevMonthDate.getDate() - startDay + j + 1, '');
+            cell.classList.add('prev-month');
+            row.appendChild(cell);
+        }
+
+        function setNextDate(row) {
+            const cell = document.createElement('td');
+            cell.textContent = nextDay++;
+            cell.classList.add('next-month');
+            row.appendChild(cell);
+        }
+
+        for (let i = 0; i < 6; i++) {
+            const row = document.createElement('tr');
+            let hasDate = false;
+            for (let j = 0; j < 7; j++) {
+                if (i === 0 && j < startDay) {
+                    setPreDate(j, row);
+                } else if (date <= daysInMonth) {
+                    const id = currentYear + '-' + (currentMonth + 1) + '-' + date;
+
+                    const cell = document.createElement('td');
+
+                    // 增加点击事件
+                    cell.addEventListener('click', () => {
+                        loadNote(id);
+                    });
+
+                    if (j === 0 || j === 6) {
+                        // 周末字体为红色
+                        cell.classList.add('weekend');
+                    }
+                    // 今天的日期增加背景颜色
+                    if (isToday(currentYear, currentMonth, date)) {
+                        cell.classList.add('today');
+                    }
+                    const dayNo = calculateDaysFromBirthday(date);
+                    addOneInfo(cell, date, dayNo, data.hasOwnProperty(id));
+                    row.appendChild(cell);
+                    date++;
+                    hasDate = true;
+                } else {
+                    setNextDate(row);
+                }
+            }
+            if (hasDate) {
+                calendarBody.appendChild(row);
+                rowCount++;
+            }
+        }
+
+        // Remove extra rows if necessary
+        while (rowCount > Math.ceil((startDay + daysInMonth) / 7)) {
+            calendarBody.removeChild(calendarBody.lastChild);
+            rowCount--;
+        }
+
+        document.getElementById('month-year').textContent = `${currentYear}年${currentMonth + 1}月`;
+
+        loadNote(formatDate(today).substring(0, 7) + '-' + today.getDate()); // 刷新页面时加载今天的记事
+    }
+
+    function prevMonth() {
+        if (currentMonth === 0) {
+            currentMonth = 11;
+            currentYear--;
+        } else {
+            currentMonth--;
+        }
+        displayCalendar();
+    }
+
+    function nextMonth() {
+        if (currentMonth === 11) {
+            currentMonth = 0;
+            currentYear++;
+        } else {
+            currentMonth++;
+        }
+        displayCalendar();
+    }
+
+    function goToToday() {
+        currentMonth = new Date().getMonth();
+        currentYear = new Date().getFullYear();
+        displayCalendar();
+    }
+
+    function loadNote(day) {
+        const selectDateElement = document.getElementById('select-date');
+        selectDateElement.innerText = '日期：' + day;
+
+        // 从 localStorage 中加载记事内容
+        const noteText = document.getElementById('note-text');
+        const savedNote = data[day];
+        noteText.value = savedNote ? savedNote : "";
+    }
+
+    function saveNote() {
+        const noteText = document.getElementById('note-text').value;
+        const selectedDate = document.getElementById('select-date').innerText.split('：')[1];
+        if (noteText && noteText !== '') {
+            data[selectedDate] = noteText
+        } else {
+            delete data[selectedDate]
+        }
+        localStorage.setItem(infoKey, JSON.stringify(data));
+    }
+
+    function formatDate(date) {
+        return date.toISOString().split('T')[0];
+    }
+
+    displayCalendar();
+
+    function copyText(strIn) {
+        if (window.clipboardData) {
+            window.clipboardData.setData('text', strIn)
+        } else {
+            (function (strIn) {
+                document.oncopy = function (e) {
+                    e.clipboardData.setData('text', strIn)
+                    e.preventDefault()
+                    document.oncopy = null
+                }
+            })(strIn);
+            document.execCommand('Copy')
+        }
+    }
+
+    function copyData() {
+        copyText(JSON.stringify(data))
+    }
+
+    function importData() {
+        const noteText = document.getElementById('note-text').value;
+        try {
+            let inputData = JSON.parse(noteText)
+            if (inputData) {
+                for (let key of Object.keys(inputData)) {
+                    if (inputData[key] && inputData[key] !== '') {
+                        data[key] = inputData[key]
+                    } else {
+                        delete data[key]
+                    }
+                }
+            }
+
+            localStorage.setItem(infoKey, JSON.stringify(data));
+            location.reload()
+        } catch (e) {
+
+        }
+    }
+</script>
+</body>
+</html>
